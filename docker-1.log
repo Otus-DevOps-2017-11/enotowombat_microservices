@@ -1,16 +1,8 @@
-# enotowombat_microservices
-# HW14 Docker-1
+REPOSITORY                    TAG                 IMAGE ID            CREATED             SIZE
+enotowombat/ubuntu-tmp-file   latest              21dd199eb1f2        36 seconds ago      112MB
+ubuntu                        16.04               0458a4468cbc        6 days ago          112MB
+hello-world                   latest              f2a91732366c        2 months ago        1.85kB
 
-### Установка
-Устанавливаем Docker по инструкции, проверяем версию: `Docker version 17.12.0-ce`
-Чтобы не делать sudo docker, создаем группу docker и добавляем туда своего пользователя 
-
-### Задание
-Проходим по инструкции в задании. Не копирую сюда действия, они именно такие, как там написано
-Вывод `docker images` в docker-1.log
-Удаляем образы и контейнеры
-
-### Задание со *
 Сравниваем docker inspect <u_container_id> и docker inspect <u_image_id>
 Вообще, разница image и container, как понял:
 Image - набор RO слоев, каждый новый содержит diff с предыдущим. Слои связываются указателями на id родителя. Union FS представляет набор слоев как один 
@@ -29,4 +21,3 @@ Architecture, Os, список слоев (Layers)
 State (Status, Pid, StartedAt, FinishedAt)
 Параметры создания контейнера Image, Env, Cmd, Entrypoint, пути (ResolvConfPath, HostnamePath, HostsPath, LogPath), HostConfig (Memory/CPU/IO limits и другие параметры cgroups, PidMode, UsernsMode, namespace параметры). 
 NetworkSettings. В остановленном контейнере параметры (IPAddress, Gateway, MacAddress) будут пустыми
-
