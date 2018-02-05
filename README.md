@@ -30,3 +30,19 @@ State (Status, Pid, StartedAt, FinishedAt)
 Параметры создания контейнера Image, Env, Cmd, Entrypoint, пути (ResolvConfPath, HostnamePath, HostsPath, LogPath), HostConfig (Memory/CPU/IO limits и другие параметры cgroups, PidMode, UsernsMode, namespace параметры). 
 NetworkSettings. В остановленном контейнере параметры (IPAddress, Gateway, MacAddress) будут пустыми
 
+# HW 15 Docker-2
+
+- docker-machine установлен
+- новый проект создан, gcloud сконфигурирован
+- docker-хост создан
+
+### Сравнение команд:
+`docker run --rm -ti tehbilly/htop` - htop показывает результат только для контейнера, контейнер ограничен своим namespace
+`docker run --rm --pid host -ti tehbilly/htop` - для хоста. можем видеть htop для всего хоста (инстанса gce), т.к. работаем в namespace хоста
+
+- `Dockerfile`, `mongod.conf`, `db_config`, `start.sh`
+- собираем образ
+- запускаем контейнер
+- добавляем правило фаервола
+- логинимся в docker hub, загружаем образ
+
