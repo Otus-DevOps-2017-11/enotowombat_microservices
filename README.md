@@ -46,3 +46,44 @@ NetworkSettings. В остановленном контейнере параме
 - добавляем правило фаервола
 - логинимся в docker hub, загружаем образ
 
+
+# HW 16 Docker-3
+
+
+Использовался linter hadolint
+Изменения в Dockerfiles для следования рекомендациям:
+- Delete the apt-get lists after installing something, добавил `apt-get clean && rm -rf /var/lib/apt/lists/*`
+- Avoid additional packages by specifying `--no-install-recommends`
+- Замена ADD на COPY
+- Замена ENV на ARG для переменной, нужной только на время сборки образа
+
+Новая структура приложения скопирована, образы созданы
+
+### "Cборка ui началась не с первого шага" 
+Первый шаг Step 1/13 : FROM ruby:2.2 --> id образа, уже созданного при сборке comment, используем его, также для других шагов использовались кэши с прошлой сборки 
+
+Сеть создана, контейнеры запущены, работает
+
+### "Запустите контейнеры с другими сетевыми алиасами"
+Меняем алиасы, передаем новые названия в `--env`
+`docker run -d --network=reddit --network-alias=post_db2 --network-alias=comment_db2 mongo:latest`
+`docker run -d --network=reddit --network-alias=post2 --env POST_DATABASE_HOST=post_db2 enot/post:1.0 `
+`docker run -d --network=reddit --network-alias=comment2 --env COMMENT_DATABASE_HOST=comment_db2  enot/comment:1.0`
+`docker run -d --network=reddit -p 9292:9292 --env POST_SERVICE_HOST=post2 --env COMMENT_SERVICE_HOST=comment2 enot/ui:1.0`
+Работает
+
+Меняем `ui/Dockerfile`
+### "Пересоберем ui (с какого шага началась сборка?)"
+C первого, на первом шаге используем новый образ, кэш не используется
+
+### Образ на основе alpine linux
+- Отключаем кэш `--no-cache`. С этой опцией не нужно делать `--update` и после установки чистить кэш apk 
+- Выясняем, какие пакеты минимально необходимы, получилось так: ruby, build-base, ruby-dev, ruby-bundler. И еще ruby-json 
+- Используем Virtual Packages, `--virtual` или `-t`. Включаем пакеты, нужные только на время сборки, в виртуальную группу, потом удаляем группу. Просто для удобства
+- Временно добавляем `apk add bash`, чтобы подключиться к контейнеру и посмотреть что еще можно почистить (нашелся /root/.bundle/cache который судя по названию нам не нужен)
+- Всю установку и чистку собираем в один RUN 
+- Размер уменьшился:
+`REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+enot/ui             4.0                 35f376dec6cf        11 seconds ago      37MB`
+
+Используем docker volume, проверяем, работает
