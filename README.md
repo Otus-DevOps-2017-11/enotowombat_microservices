@@ -137,3 +137,108 @@ https://docs.docker.com/machine/reference/scp/#specifying-file-paths-for-remote-
 добавляем в `docker-compose.override.yml`:
 `command: ["puma", "--debug", "-w", "2"]`
 
+# HW19 Docker-6
+
+- создаем ВМ (1 vCPU, 5.5 GB memory), для удобства берем static ip
+- ставим docker
+- запускаем Gitlab CI, настраиваем
+- запускаем runner, регистрируем
+- джобы работают, тесты проходят
+
+
+### Auto runners setup
+
+У меня был вариант создания нужного количества раннеров с `--non-interactive` регистрацией ансиблом, количество раннеров, токен задавать вручную. Но, увидев, что коллеги пользуются runner autoscaling, понял, что держать десятки все время поднятых раннеров - не очень хорошая идея, нужно делать именно autoscaling
+
+Настраиваем
+
+- Все окружение готовим в уже созданной ВМ gitlab-ci
+- Запускаем в контейнерах Docker Registry и Cache Server (registry чтобы не тащить каждый раз образы с Dockerhub, cache для кэширования данных сборок местно, в gce):
+`docker run -d -p 6000:5000 \
+    -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io \
+    --restart always \
+    --name registry registry:2`
+`docker run -it --restart always -p 9005:9000 \
+        -v /.minio:/root/.minio -v /export:/export \
+        --name minio \
+        minio/minio:latest server /export`
+Можно их добавить в docker-compose.yml
+- Ставим Docker Machine, cоздаем и регистрируем новый runner, указываем executor docker+machine
+- Настраиваем runner 
+`config.toml`:
+```
+concurrent = 5
+check_interval = 5
+
+[[runners]]
+  name = "my-autoscale-runner"
+  url = "CI_SERVER_URL"
+  token = "REGISTRATION_TOKEN"
+  executor = "docker+machine"
+  limit = 6
+  [runners.docker]
+    tls_verify = false
+    image = "ruby:2.1"
+    privileged = false
+    disable_cache = false
+    volumes = ["/cache"]
+    shm_size = 0
+  [runners.cache]
+    Type = "s3"
+    ServerAddress = "MY_CACHE_IP:9005"
+    AccessKey = "ACCESS_KEY"
+    SecretKey = "SECRET_KEY"
+    BucketName = "runner"
+    Insecure = true
+  [runners.machine]
+    IdleCount = 1
+    MachineDriver = "google"
+    MachineName = "gitlab-runner-%s"
+    MachineOptions = [
+      "google-project=docker-xxxxxx",
+      "google-machine-type=g1-small",
+      "google-machine-image=ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20180126",
+      "google-tags=default-allow-ssh",
+      "google-preemptible=true",
+      "google-zone=europe-west1-b",
+      "google-use-internal-ip=true"
+    ]
+    OffPeakTimezone = ""
+    OffPeakIdleCount = 0
+    OffPeakIdleTime = 0
+```
+- генерим ключ для gce service account, копируем в gilab-ci ВМ, монтируем volume с ключем в runner контейнер, путь указываем в GOOGLE_APPLICATION_CREDENTIALS
+`docker-compose.yml`:
+```
+web:
+  image: 'gitlab/gitlab-ce:latest'
+  restart: always
+  hostname: 'gitlab.example.com'
+  environment:
+    GITLAB_OMNIBUS_CONFIG: |
+      external_url 'CI_SERVER_URL'
+      # Add any other gitlab.rb configuration here, each on its own line
+  ports:
+    - '80:80'
+    - '443:443'
+    - '2222:22'
+  volumes:
+    - '/srv/gitlab/config:/etc/gitlab'
+    - '/srv/gitlab/logs:/var/log/gitlab'
+    - '/srv/gitlab/data:/var/opt/gitlab'
+
+runner:
+  image: 'gitlab/gitlab-runner:latest'
+  container_name: 'gitlab-runner'
+  restart: always
+  environment:
+    - GOOGLE_APPLICATION_CREDENTIALS=/etc/gitlab-runner/gce-credentials.json
+  volumes:
+    - '/srv/gitlab-runner/config:/etc/gitlab-runner'
+
+```
+- запускаем, проверяем. С виду работает, на несколько пушей подряд создаются новые машины с названиями типа `runner-be2265a1-gitlab-runner-1519281417-b8c4439c`, джобы выполняются, если слишком много сразу то лишние становились canceled
+
+
+### Интеграция со Slack
+Добавил Incoming WebHook, вписал его в Slack notifications, скриншот добавлю в PR
