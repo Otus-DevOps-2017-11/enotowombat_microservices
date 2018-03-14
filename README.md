@@ -244,6 +244,113 @@ runner:
 Добавил Incoming WebHook, вписал его в Slack notifications, скриншот добавлю в PR
 
 
+# HW 21. Monitoring-1
+
+- Готовим окружение
+- Запускаем Prometheus, смотрим на него
+- Меняем структуру директорий
+- Собираем образы (в Dockerfile prometheus нерекомендованный `ADD` поменял на `COPY`)
+- Тестируем healthcheck'и
+docker-compose stop post_db -> comment_health=0 -> comment_health_mongo_availability=0 -> 
+docker-compose start post_db -> comment_health_mongo_availability=1 -> comment_health=1
+- Добавляем node-exporter
+- Добавляем сети:
+```
+networks:
+  - back_net
+  - front_net
+```
+- Docker hub: https://hub.docker.com/u/enot/ 
+
+
+### * MongoDB exporter
+
+Взял этот: https://github.com/dcu/mongodb_exporter
+Есть еще, например, такой: https://github.com/percona/mongodb_exporter, форк dcu/mongodb_exporter, но у меня первый сразу заработал, не стал другие тестить
+
+Небольшой нюанс. Надо немного поправить Makefile, `perl -p -i -e 's/{{VERSION}}/$(TAG)/g' mongodb_exporter.go`, экранировать скобку
+Раньше это видимо работало с deprecation warning, в новых версиях perl уже ошибка, `Unescaped left brace in regex is illegal`
+
+Сначала просто собрал образ и положил на docker hub, в microservices репозиторий ничего не добавлял: 
+`git clone https://github.com/dcu/mongodb_exporter.git`
+`docker build -t enot/mongodb_exporter .`
+`docker push enot/mongodb_exporter`
+
+Но в последнем задании нужно было делать билд всех используемых образов, поэтому сделал Dockerfile 
+Пришлось добавить туда немного sed'а, наверно это не очень хорошо
+`RUN cd /go/src/github.com/dcu/mongodb_exporter && sed -i 's!{V!\\{V!' Makefile && make release`
+
+`docker-compose.yml`:
+```
+  mongo-exporter:
+    image: ${USERNAME}/mongodb_exporter:${MONGO_EXPORTER_VERSION}
+    networks:
+      - back_net
+    command:
+      - '-mongodb.uri=mongodb://post_db:27017'
+```
+
+`prometheus.yml`:
+```
+  - job_name: 'mongo'
+    static_configs:
+      - targets:
+        - 'mongo-exporter:9001'
+```
+
+Появились mongodb-метрики
+
+
+### * Blackbox exporter
+
+- Добавляем сервис из стандартного образа
+`docker-compose.yml`:
+```
+  blackbox-exporter:
+    image: prom/blackbox-exporter
+    networks:
+      - front_net
+    ports:
+      - '9115:9115'
+```
+- Копируем из документации пример конфига, подставляем наши ip и порты (`COMMENT_SERVICE_PORT 9292`, `POST_SERVICE_PORT 5000`)
+`prometheus.yml`:
+```
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]  # Look for a HTTP 200 response.
+    static_configs:
+      - targets:
+        - http://ui:9292/healthcheck    # Target to probe with http.
+        - http://comment:9292/healthcheck
+        - http://post:5000/healthcheck
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115  # The blackbox exporter's real hostname:port.
+```
+
+```
+probe_http_status_code{instance="http://comment:9292/healthcheck",job="blackbox"} = 200
+probe_http_status_code{instance="http://post:5000/healthcheck",job="blackbox"} = 200
+probe_http_status_code{instance="http://ui:9292/healthcheck",job="blackbox"} = 200
+```
+
+### * Makefile
+
+build - билдит все образы
+build_ui, build_comment, build_post, build_prometheus, build_mongodb_exporter - билдит по отдельности
+push - пушит все 
+push_ui, push_comment, push_post, push_prometheus, push_mongodb_exporter - пушит по отдельности
+restart - пересоздает сервисы
+Без параметров все билдит, пушит и рестартит
+
+Жаль не догадался сделать это задание в первую очередь, стало очень удобно
+=======
 # Homework 20 docker-7
 
 
