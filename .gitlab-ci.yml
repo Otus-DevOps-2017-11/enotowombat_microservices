@@ -1,40 +1,97 @@
-image: ruby:2.4.2
+image: docker:latest
 
-stages: 
-  - build 
-  - test
-  - deploy
-
-variables: 
+variables:
+  DOCKER_DRIVER: overlay2
   DATABASE_URL: 'mongodb://mongo/user_posts'
 
+services:
+  - docker:dind
+
+stages: 
+  - build
+  - test
+  - review
+  - stage
+  - production 
+
 before_script:
-  - cd reddit 
-  - bundle install
+  - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-build_job: 
-  stage: build 
-  script: 
-    - echo 'Building'
+build_job:
+  stage: build
+  script:
+    - docker build -t $DOCKER_USER/reddit:$CI_COMMIT_REF_NAME docker-monolith
+    - docker push $DOCKER_USER/reddit:$CI_COMMIT_REF_NAME
 
-test_unit_job: 
-  stage: test 
-  script: 
+test_unit_job:
+  stage: test
+  script:
     - echo 'Testing 1'
 
-test_integration_job: 
+test_integration_job:
   stage: test
-  script: 
+  script:
     - echo 'Testing 2'
 
-deploy_job: 
-  stage: deploy 
-  script: 
+deploy_dev_job:
+  stage: review
+  script:
     - echo 'Deploy'
+  environment:
+    name: dev
+    url: http://dev.example.com
 
-test_unit_job: 
-  stage: test 
-  services: 
-    - mongo:latest 
-  script: 
-    - ruby simpletest.rb
+branch review: 
+  stage: review 
+  script:
+    - apk update && apk add ca-certificates curl py-pip
+    - curl -L https://github.com/docker/machine/releases/download/v0.14.0/docker-machine-`uname -s`-`uname -m` >/tmp/docker-machine && install /tmp/docker-machine docker-machine
+    - ./docker-machine create --driver google --google-project $GCE_PROJECT_ID --google-zone europe-west1-b --google-machine-type g1-small --google-machine-image ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20180126 $CI_COMMIT_REF_SLUG
+    - URL=$(./docker-machine ip $CI_COMMIT_REF_SLUG)
+    - eval $(./docker-machine env --shell sh $CI_COMMIT_REF_SLUG)
+    - docker pull $DOCKER_USER/reddit:$CI_COMMIT_REF_NAME
+    - docker run --name reddit -d -p 9292:9292 $DOCKER_USER/reddit:$CI_COMMIT_REF_NAME
+
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    url: http://$CI_ENVIRONMENT_SLUG.example.com
+    on_stop: stop_review
+  only:
+    - branches 
+  except:
+    - master 
+
+stop_review:
+  image: google/cloud-sdk:latest
+  stage: review
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - gcloud compute instances delete $CI_COMMIT_REF_SLUG --zone=europe-west1-b --delete-disks=all
+  when: manual
+  environment:
+    name: branch/$CI_COMMIT_REF_NAME
+    action: stop
+
+staging:
+  stage: stage
+  when: manual
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    - echo 'Deploy'
+  environment:
+    name: stage
+    url: https://beta.example.com
+
+production:
+  stage: production
+  when: manual
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    - echo 'Deploy'
+  environment:
+    name: production
+    url: https://example.com
+
