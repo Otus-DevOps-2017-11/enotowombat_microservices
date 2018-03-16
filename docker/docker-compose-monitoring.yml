@@ -1,0 +1,95 @@
+version: '3.3'
+services:
+
+  prometheus:
+    image: ${USERNAME}/prometheus:${PROMETHEUS_VERSION}
+    networks:
+      - back_net
+      - front_net
+    ports:
+      - '9090:9090'
+    volumes:
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention=1d'
+
+  node-exporter:
+    image: prom/node-exporter:v0.15.2
+    networks:
+      - back_net
+      - front_net
+    user: root
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+
+  mongo-exporter:
+    image: ${USERNAME}/mongodb_exporter:${MONGO_EXPORTER_VERSION}
+    networks:
+      - back_net
+    command:
+      - '-mongodb.uri=mongodb://post_db:27017'
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_VERSION}
+    networks:
+      - front_net
+    ports:
+      - '9115:9115'
+
+  cadvisor: 
+    image: google/cadvisor:v0.29.0 
+    volumes: 
+      - '/:/rootfs:ro'
+      - '/var/run:/var/run:rw'
+      - '/sys:/sys:ro'
+      - '/var/lib/docker/:/var/lib/docker:ro'
+    networks:
+      - back_net
+      - front_net
+    ports: 
+      - '8080:8080'
+
+  grafana:
+    image: grafana/grafana:5.0.0
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    depends_on:
+      - prometheus
+    networks:
+      - back_net
+      - front_net
+    ports:
+      - 3000:3000
+
+  alertmanager: 
+    image: ${USER_NAME}/alertmanager:${ALERTMANAGER_VERSION}
+    command: 
+      - '--config.file=/etc/alertmanager/config.yml' 
+    networks:
+      - back_net
+      - front_net
+    ports:
+      - 9093:9093
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  front_net:
+    external:
+      name: docker_front_net
+  back_net:
+    external:
+      name: docker_back_net

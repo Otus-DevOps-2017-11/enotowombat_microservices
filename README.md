@@ -406,3 +406,63 @@ check_interval = 3
 ```
 
 Во время тестов наплодилось множество коммитов, по итогам просто все изменения сделал как один коммит, иначе плохо выглядит
+
+
+# Homework 23 Monitoring-2
+
+
+- Готовим окружение
+- Билдим образы сервисов
+- Добавляем docker-compose-monitoring.yml, выносим туда мониторинговые сервисы, дополняем Makefile
+- Добавляем cadvisor. Сервис в docker-compose-monitoring.yml, джоб в prometheus.yml, правило фаервола allow tcp:8080
+- Добавляем Grafana. Сервис в docker-compose-monitoring.yml, правило фаервола allow tcp:3000. Настраиваем
+- Настраиваем дашборд
+- Добавляем rate для ui_request_count, `rate(ui_request_count[1m])`
+- Добавляем comment_count. Сохраняем дашборды
+- Настраиваем Alertmanager. Dockerfile (+ADD->COPY), docker-compose-monitoring.yml, config.yml, slack, Makefile, prometheus.yml allow tcp::9093
+- Проверяем. Скриншот алерта в слаке будет в PR
+- Docker hub: https://hub.docker.com/u/enot/ 
+
+### * 
+
+- Makefile дополнял по ходу основного задания
+
+- Сбор Docker метрик 
+Настраиваем по инструкции, но не совсем
+На докер хосте добавляем демону настройку `/etc/docker/daemon.json`:
+```
+{
+  "metrics-addr" : "0.0.0.0:9323",
+  "experimental" : true
+}
+```
+Не 127.0.0.1, а 0.0.0.0. Перезапускам демона
+Можно задавать эти параметры для docker-machine при создании докер хоста:
+`--engine-opt experimental --engine-opt metrics-addr=0.0.0.0:9323`
+Открываем порт
+Добавляем джоб в prometheus.yml:
+```
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['172.18.0.1:9323']
+```
+В targes не localhost, а адрес бриджа
+Пересобираем prometheus, перезапускаем, проверяем, что новый Target UP, смотрим новые метрики типа engine_daemon_
+
+Перцентиль 95:
+``` 
+    - alert: UILatency
+      expr: histogram_quantile(0.95, sum(rate(ui_request_latency_seconds_bucket[5m])) by (le)) > 0.01
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        description: '{{ $labels.instance }} of job {{ $labels.job }} has 95 percentile slow UI responces for more than 1 minute'
+        summary: 'Instance {{ $labels.instance }} down'
+```
+
+- Отправка e-mail алертов
+Оказыватся, GCE блокирует smtp (25, 465, 587), Google Compute Engine does not allow outbound connections on ports 25, 465, and 587
+Но mail.ru позволяет обойти, принимает на порт 2525, для тестов так и сделаем
+
+Про ** написано, что займет много времени, тогда может потом допишу  
