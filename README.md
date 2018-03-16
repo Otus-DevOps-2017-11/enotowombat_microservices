@@ -244,6 +244,63 @@ runner:
 Добавил Incoming WebHook, вписал его в Slack notifications, скриншот добавлю в PR
 
 
+# Homework 20 docker-7
+
+
+### Основное
+- создаем новый проект example2
+- включаем раннер
+- stage deploy -> review, deploy_job -> deploy_dev_job, + environment. Появился dev Environment, джобы отработали
+- +stage, production stages. В пайплайне появились Stage и Production. Когда выполнился Review, в Environments появились stage и production
+- добавляем ограничение only. Без тега stage и production в pipeline нет, с тегом - есть
+- добавлям динамичское окружение. Создаем два новых бранча, в Environments появляются сгруппированные branch/bugfix и branch/new-feature
+
+
+### * и **
+
+- Используем docker-in-docker (dind):
+```
+image: docker:latest
+services:
+    - docker:dind
+```
+- Using the privileged mode to start the build and service containers
+`config.toml`: `privileged = true`
+- В build_job собираем образ из `docker-monolith`, все в одном. И делаем push в repository (docker docker hub)
+- В branch review делаем pull ранее сохраннного образа и запускаем в GCE инстансе (с помощью docker-machine)
+- Для остановки review окружения добавляем джоб `stop_review`. Удаляем созданный ранее GCE инстанс gcloud'ом, для этого используем контейнер с образом `google/cloud-sdk:latest`, но можно взять образ поменьше, cloud-sdk:alpine. 
+Нужно убедиться, что GCE инстанс с ранером имеет права на удаление ВМ. У меня раннер работал на ВМ c gitlab-ci, статически, поэтому `Cloud API access scopes` проставил вручную. Для динамически создавамых ВМ с раннерами видимо нужно указывать права при создании в опции --scopes (возможно, compute-rw, https://www.googleapis.com/auth/compute, но не проверял)
+- Сделать в review окружении url = vm_ip:9292, получив ip сразу после создания vm, не получилось, потому что `You however cannot use variables defined under script or on the Runner's side`
+- Использованные Secret variables:
+`DOCKER_USER`
+`DOCKER_PASSWORD`
+`GCE_PROJECT_ID`
+`GOOGLE_APPLICATION_CREDENTIALS`
+
+
+- `config.toml':
+```
+concurrent = 5
+check_interval = 3
+
+[[runners]]
+  name = "runner2"
+  url = "http://104.199.54.44/"
+  token = "02e19f153582e4a3f172615b2bbeea"
+  executor = "docker"
+  [runners.docker]
+    tls_verify = false
+    image = "docker:latest"
+    privileged = true
+    disable_cache = false
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/srv/gitlab-runner/config:/etc/gitlab-runner", "/cache"]
+    shm_size = 0
+  [runners.cache]
+```
+
+Во время тестов наплодилось множество коммитов, по итогам просто все изменения сделал как один коммит, иначе плохо выглядит
+
+
 # HW 21. Monitoring-1
 
 - Готовим окружение
@@ -350,59 +407,3 @@ restart - пересоздает сервисы
 Без параметров все билдит, пушит и рестартит
 
 Жаль не догадался сделать это задание в первую очередь, стало очень удобно
-=======
-# Homework 20 docker-7
-
-
-### Основное
-- создаем новый проект example2
-- включаем раннер
-- stage deploy -> review, deploy_job -> deploy_dev_job, + environment. Появился dev Environment, джобы отработали
-- +stage, production stages. В пайплайне появились Stage и Production. Когда выполнился Review, в Environments появились stage и production
-- добавляем ограничение only. Без тега stage и production в pipeline нет, с тегом - есть
-- добавлям динамичское окружение. Создаем два новых бранча, в Environments появляются сгруппированные branch/bugfix и branch/new-feature
-
-
-### * и **
-
-- Используем docker-in-docker (dind):
-```
-image: docker:latest
-services:
-    - docker:dind
-```
-- Using the privileged mode to start the build and service containers
-`config.toml`: `privileged = true`
-- В build_job собираем образ из `docker-monolith`, все в одном. И делаем push в repository (docker docker hub)
-- В branch review делаем pull ранее сохраннного образа и запускаем в GCE инстансе (с помощью docker-machine)
-- Для остановки review окружения добавляем джоб `stop_review`. Удаляем созданный ранее GCE инстанс gcloud'ом, для этого используем контейнер с образом `google/cloud-sdk:latest`, но можно взять образ поменьше, cloud-sdk:alpine. 
-Нужно убедиться, что GCE инстанс с ранером имеет права на удаление ВМ. У меня раннер работал на ВМ c gitlab-ci, статически, поэтому `Cloud API access scopes` проставил вручную. Для динамически создавамых ВМ с раннерами видимо нужно указывать права при создании в опции --scopes (возможно, compute-rw, https://www.googleapis.com/auth/compute, но не проверял)
-- Сделать в review окружении url = vm_ip:9292, получив ip сразу после создания vm, не получилось, потому что `You however cannot use variables defined under script or on the Runner's side`
-- Использованные Secret variables:
-`DOCKER_USER`
-`DOCKER_PASSWORD`
-`GCE_PROJECT_ID`
-`GOOGLE_APPLICATION_CREDENTIALS`
-
-
-- `config.toml':
-```
-concurrent = 5
-check_interval = 3
-
-[[runners]]
-  name = "runner2"
-  url = "http://104.199.54.44/"
-  token = "02e19f153582e4a3f172615b2bbeea"
-  executor = "docker"
-  [runners.docker]
-    tls_verify = false
-    image = "docker:latest"
-    privileged = true
-    disable_cache = false
-    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/srv/gitlab-runner/config:/etc/gitlab-runner", "/cache"]
-    shm_size = 0
-  [runners.cache]
-```
-
-Во время тестов наплодилось множество коммитов, по итогам просто все изменения сделал как один коммит, иначе плохо выглядит
