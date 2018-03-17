@@ -1,0 +1,16 @@
+global:
+  slack_api_url: 'https://hooks.slack.com/services/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'
+  smtp_from: 'g0nz0@mail.ru'
+  smtp_smarthost: 'smtp.mail.ru:2525'
+  smtp_auth_username: 'g0nz0@mail.ru'
+  smtp_auth_password: 'kvakakva'
+
+route:
+  receiver: 'notifications'
+
+receivers:
+- name: 'notifications'
+  slack_configs:
+  - channel: '#alert-test'
+  email_configs:
+  - to: 'g0nz0@mail.ru'
