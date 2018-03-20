@@ -18,6 +18,7 @@ RUN apk --no-cache add -t tmp \
   ruby-dev \
   ruby-bundler \
   && apk --no-cache add ruby-json \
+  && gem install bundler --no-ri --no-rdoc \
   && bundle install \
   && apk del tmp \
   && rm -rf /root/.bundle/cache

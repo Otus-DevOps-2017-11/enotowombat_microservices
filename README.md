@@ -467,3 +467,36 @@ restart - пересоздает сервисы
 Но mail.ru позволяет обойти, принимает на порт 2525, для тестов так и сделаем
 
 Про ** написано, что займет много времени, тогда может потом допишу  
+
+
+# Homework 25 Logging-1
+
+- Обновляем src
+- Собираем образы приложений (+немного поправим Dockerfile)
+- Сервисы для логирования: `docker-compose-logging.yml`
+- Настраиваем fluentd
+- `ConnectionError: HTTPConnectionPool(host='zipkin', port=9411)` - пора переходить к настройке zipkin. Пока только запускаем
+- Смотрим Kibana
+
+
+### * fluentd парсинг
+Дополнительно парсим сообщения вида: 
+`message: service=ui | event=request | path=/healthcheck | request_id=137f330f-c266-4b44-8561-822b22e6a08e | remote_addr=172.18.0.4 | method= GET | response_status=200`
+`fluent.conf`:
+```
+<filter service.ui>
+  @type parser
+  format grok
+  grok_pattern service=%{WORD:service} \| event=%{WORD:event} \| path=%{URIPATH:path} \| request_id=%{GREEDYDATA:request_id} \| remote_addr=%{IP:remote_addr} \| method=\s%{WORD:method} \| response_status=%{NUMBER:response_status}
+  key_name message
+</filter>
+```
+
+### * Zipkin трейсинг
+
+Берем новый src, добавлям нужные ENV в докерфайлы
+Тормозит здесь: `3.014s : /post/<id>`, потому что в `post_app.py` `find_post` есть `time.sleep(3)`
+При этом в интерфейсе зипкина span 'db_find_single_post' не отображается, только уровем выше '/post/<id>'
+Поменял `span_name` (на то же имя, что у функции), отображается
+`@zipkin_span(service_name='post', span_name='db_find_single_post')` ->
+`@zipkin_span(service_name='post', span_name='find_post')`

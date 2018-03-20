@@ -18,6 +18,11 @@ services:
       front_net:
         aliases:
           - ui
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.ui
   post:
     image: ${USERNAME}/post:${POST_VERSION}
     networks:
@@ -27,6 +32,11 @@ services:
       front_net:
         aliases:
           - post
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.post
   comment:
     image: ${USERNAME}/comment:${COMMENT_VERSION}
     networks:

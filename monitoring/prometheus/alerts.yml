@@ -17,4 +17,4 @@ groups:
         severity: critical
       annotations:
         description: '{{ $labels.instance }} of job {{ $labels.job }} has 95 percentile slow UI responces for more than 1 minute'
-        summary: 'Instance {{ $labels.instance }} down'
+        summary: 'Instance {{ $labels.instance }} is slow'
