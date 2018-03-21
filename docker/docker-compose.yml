@@ -1,8 +1,11 @@
 version: '3.3'
 services:
-
   post_db:
-    image: mongo:3.2
+    image: mongo:${MONGO_VERSION}
+    deploy:
+      placement:
+        constraints:
+          - node.labels.reliability == high
     volumes:
       - post_db:/data/db
     networks:
@@ -11,20 +14,58 @@ services:
           - post_db
           - comment_db
   ui:
-    image: ${USERNAME}/ui:${UI_VERSION}
+    image: ${USER_NAME}/ui:${UI_VERSION}
+    environment:
+      - ENV=DEV
+    deploy:
+      restart_policy:
+        condition: on-failure 
+        max_attempts: 3
+        delay: 3s
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 150M
+      replicas: ${UI_REPLICAS}
+      update_config:
+        delay: 5s
+        parallelism: 1
+        failure_action: pause
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == worker
     ports:
       - ${UI_PORT}:9292/tcp
     networks:
       front_net:
         aliases:
           - ui
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: localhost:24224
-        tag: service.ui
+#    logging:
+#      driver: "fluentd"
+#      options:
+#        fluentd-address: localhost:24224
+#        tag: service.ui
   post:
-    image: ${USERNAME}/post:${POST_VERSION}
+    image: ${USER_NAME}/post:${POST_VERSION}
+    deploy:
+      restart_policy: 
+        condition: on-failure 
+        max_attempts: 10
+        delay: 1s
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 300M
+      replicas: ${POST_REPLICAS}
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == worker
     networks:
       back_net:
         aliases:
@@ -32,13 +73,31 @@ services:
       front_net:
         aliases:
           - post
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: localhost:24224
-        tag: service.post
+#    logging:
+#      driver: "fluentd"
+#      options:
+#        fluentd-address: localhost:24224
+#        tag: service.post
   comment:
-    image: ${USERNAME}/comment:${COMMENT_VERSION}
+    image: ${USER_NAME}/comment:${COMMENT_VERSION}
+    deploy:
+      restart_policy: 
+        condition: on-failure 
+        max_attempts: 10
+        delay: 1s
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 300M
+      replicas: ${COMMENT_REPLICAS}
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+      mode: replicated
+      placement:
+        constraints:
+          - node.role == worker
     networks:
       back_net:
         aliases:
@@ -46,6 +105,23 @@ services:
       front_net:
         aliases:
           - comment
+
+#  node-exporter:
+#    image: prom/node-exporter:v0.15.2
+#    deploy: 
+#      mode: global 
+#    networks:
+#      - back_net
+#      - front_net
+#    user: root
+#    volumes:
+#      - /proc:/host/proc:ro
+#      - /sys:/host/sys:ro
+#      - /:/rootfs:ro
+#    command:
+#      - '--path.procfs=/host/proc'
+#      - '--path.sysfs=/host/sys'
+#      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
 
 volumes:
   post_db:

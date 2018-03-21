@@ -500,3 +500,119 @@ restart - пересоздает сервисы
 Поменял `span_name` (на то же имя, что у функции), отображается
 `@zipkin_span(service_name='post', span_name='db_find_single_post')` ->
 `@zipkin_span(service_name='post', span_name='find_post')`
+
+
+# Homework 27 Docker Swarm
+
+
+- Основное задание по инструкции
+- Логирование из прошлого ДЗ пока закомментил
+- `post` без zipkin стартует, но не работает
+- `node-exporter` перенес временно из `docker-compose-monitoring.yml` в `docker-compose.yml`
+
+
+### Задание
+1. Добавить в кластер еще 1 worker машину
+- Done
+2. Проследить какие контейнеры запустятся на ней
+-  DEV_node-exporter
+3. Увеличить число реплик микросервисов (3 - минимум)
+- Done
+4. Проследить какие контейнеры запустятся на новой машине. Сравнить с пунктом 2 
+- Остался запущенным `DEV_node-exporter`
+- Добавились `DEV_post.3`, `DEV_comment.3`, `DEV_ui.3`
+
+
+### *
+`node-exporter` запускается в `global mode`, должен быть запущен на каждой ноде, при появлении новой ноды запускатся там сразу
+`post`, `comment`, `ui` запускаются в `replicated mode` с ограничением `node.role == worker`, распределяются равномерно только по воркерам. Когда нужно запустить дополнительные экземпляры, они запускаются в том воркере, где их еще нет
+
+
+### Задание
+Определить update_config для сервисов post и comment так, чтобы они обновлялись группами по 2 сервиса с разрывом в 10 секунд, а в случае неудач осуществлялся rollback.
+
+post, comment:
+```
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+```
+
+
+### Задание
+Задать ограничения ресурсов для сервисов post и comment, ограничив каждое в 300 мегабайт памяти и в 30% процессорного времени. 
+```
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 300M
+```
+
+
+### Задание
+Задайте политику перезапуска для comment и post сервисов так, чтобы Swarm пытался перезапустить их при падении с ошибкой 10-15 раз с интервалом в 1 секунду. 
+```
+restart_policy: 
+  condition: on-failure 
+  max_attempts: 10
+  delay: 1s
+```
+
+
+### Задание `docker-compose.monitoring.yml`
+- Уже было сделано в ДЗ про мониторинг, только название не `docker-compose.monitoring.yml`, а `docker-compose-monitoring.yml`
+- `node-exporter` убрал из `docker-compose.yml`, добавлял временно
+
+
+### Задание *** Управление несколькими окружениями
+
+- Новые параметры
+
+Добавил только порты сервисов и количество реплик. В остальном явной необходимости пока не увидел, думаю, чем меньше различий между окружениями, тем лучше
+```
+PROMETHEUS_PORT
+GRAFANA_PORT
+CADVISOR_PORT
+BLACKBOX_PORT
+ALERTMANAGER_PORT
+UI_REPLICAS
+POST_REPLICAS
+COMMENT_REPLICAS
+```
+
+- Окружения для примера два: DEV, PROD, соответственно файлы: `.env.dev`, `.env.prod` 
+
+Передавать переменные в docker stack deploy можно, например, `cp .env.dev .env` перед `docker-compose`, но я пользовался тем, что в `docker-compose` можно передать переменые среды (в docker stack deploy - нельзя, https://docs.docker.com/compose/compose-file/#variable-substitution):
+`docker stack deploy --compose-file=<(export $(cat .env.dev | xargs) && docker-compose -f docker-compose-monitoring.yml -f docker-compose.yml config 2>/dev/null)  DEV`
+`docker stack deploy --compose-file=<(export $(cat .env.prod | xargs) && docker-compose -f docker-compose-monitoring.yml -f docker-compose.yml config 2>/dev/null)  PROD`
+
+Получилось так:
+```
+ID                  NAME                     MODE                REPLICAS            IMAGE                           PORTS
+0x21gtu0ozde        DEV_alertmanager         replicated          1/1                 enot/alertmanager:latest        *:9094->9093/tcp
+rmkgoziae70f        DEV_blackbox-exporter    replicated          1/1                 prom/blackbox-exporter:latest   *:9116->9115/tcp
+auko1uddq7q4        DEV_cadvisor             replicated          1/1                 google/cadvisor:v0.29.0         *:8181->8080/tcp
+dagtphu5iyp6        DEV_comment              replicated          1/1                 enot/comment:latest             
+63n2mcmlzlmz        DEV_grafana              replicated          1/1                 grafana/grafana:5.0.0           *:3001->3000/tcp
+14b7guzquzd2        DEV_mongo-exporter       replicated          1/1                 enot/mongodb_exporter:latest    
+dfypo8we52qb        DEV_node-exporter        global              4/4                 prom/node-exporter:v0.15.2      
+90azkgqh0iac        DEV_post                 replicated          1/1                 enot/post:latest                
+el24eeex1t8z        DEV_post_db              replicated          1/1                 mongo:3.2                       
+upc0jh8e3c1m        DEV_prometheus           replicated          1/1                 enot/prometheus:latest          *:9191->9090/tcp
+wnlgasuanwdm        DEV_ui                   replicated          1/1                 enot/ui:latest                  *:9292->9292/tcp
+dfq6bc8220qv        PROD_alertmanager        replicated          1/1                 enot/alertmanager:latest        *:9093->9093/tcp
+j1x790iqn5uu        PROD_blackbox-exporter   replicated          1/1                 prom/blackbox-exporter:latest   *:9115->9115/tcp
+c9pciu8spmdc        PROD_cadvisor            replicated          1/1                 google/cadvisor:v0.29.0         *:8080->8080/tcp
+ichfkah137z9        PROD_comment             replicated          3/3                 enot/comment:latest             
+1kpiu5ocovgk        PROD_grafana             replicated          1/1                 grafana/grafana:5.0.0           *:3000->3000/tcp
+ugcmefb0buyo        PROD_mongo-exporter      replicated          1/1                 enot/mongodb_exporter:latest    
+wxh3v3bv2gx2        PROD_node-exporter       global              4/4                 prom/node-exporter:v0.15.2      
+4z96f2sid6a8        PROD_post                replicated          3/3                 enot/post:latest                
+yktau3d9cfhh        PROD_post_db             replicated          1/1                 mongo:3.2                       
+j1dh8k83n7na        PROD_prometheus          replicated          1/1                 enot/prometheus:latest          *:9990->9090/tcp
+mjfe4nditskf        PROD_ui                  replicated          3/3                 enot/ui:latest                  *:9293->9292/tcp
+```
+
+Сервисы доступны на dev и prod на 9292 и 9293
+
