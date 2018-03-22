@@ -616,3 +616,19 @@ mjfe4nditskf        PROD_ui                  replicated          3/3            
 
 Сервисы доступны на dev и prod на 9292 и 9293
 
+
+# HW 28 Kubernetes-1
+
+
+Пройдено
+
+
+```
+NAME                                  READY     STATUS    RESTARTS   AGE
+busybox-855686df5d-sk2q9              1/1       Running   0          11m
+comment-deployment-6b897c4694-mx2sx   1/1       Running   0          1m
+mongo-74cccfb8-rdg6m                  1/1       Running   0          1m
+nginx-8586cf59-496tm                  1/1       Running   0          8m
+post-deployment-cf4d48f44-47bgl       1/1       Running   0          1m
+ui-deployment-7544646b88-jb7pd        1/1       Running   0          1m
+```
