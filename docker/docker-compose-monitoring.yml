@@ -1,13 +1,12 @@
 version: '3.3'
 services:
-
   prometheus:
-    image: ${USERNAME}/prometheus:${PROMETHEUS_VERSION}
+    image: ${USER_NAME}/prometheus:${PROMETHEUS_VERSION}
     networks:
       - back_net
       - front_net
     ports:
-      - '9090:9090'
+      - ${PROMETHEUS_PORT}:9090
     volumes:
       - prometheus_data:/prometheus
     command:
@@ -17,6 +16,8 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v0.15.2
+    deploy:
+      mode: global
     networks:
       - back_net
       - front_net
@@ -31,7 +32,7 @@ services:
       - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
 
   mongo-exporter:
-    image: ${USERNAME}/mongodb_exporter:${MONGO_EXPORTER_VERSION}
+    image: ${USER_NAME}/mongodb_exporter:${MONGO_EXPORTER_VERSION}
     networks:
       - back_net
     command:
@@ -42,7 +43,7 @@ services:
     networks:
       - front_net
     ports:
-      - '9115:9115'
+      - ${BLACKBOX_PORT}:9115
 
   cadvisor: 
     image: google/cadvisor:v0.29.0 
@@ -55,7 +56,7 @@ services:
       - back_net
       - front_net
     ports: 
-      - '8080:8080'
+      - ${CADVISOR_PORT}:8080
 
   grafana:
     image: grafana/grafana:5.0.0
@@ -70,7 +71,7 @@ services:
       - back_net
       - front_net
     ports:
-      - 3000:3000
+      - ${GRAFANA_PORT}:3000
 
   alertmanager: 
     image: ${USER_NAME}/alertmanager:${ALERTMANAGER_VERSION}
@@ -80,16 +81,16 @@ services:
       - back_net
       - front_net
     ports:
-      - 9093:9093
+      - ${ALERTMANAGER_PORT}:9093
 
 volumes:
   prometheus_data:
   grafana_data:
 
-networks:
-  front_net:
-    external:
-      name: docker_front_net
-  back_net:
-    external:
-      name: docker_back_net
+#networks:
+#  front_net:
+#    external:
+#      name: docker_front_net
+#  back_net:
+#    external:
+#      name: docker_back_net
