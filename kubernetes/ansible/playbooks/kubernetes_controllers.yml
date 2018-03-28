@@ -1,0 +1,23 @@
+---
+- name: Bootstrapping the Kubernetes Control Plane
+  hosts: localhost
+
+  tasks:
+    - name: Bootstrapping Provision the Kubernetes Control Plane
+      template:
+        src: ../templates/kubernetes_controllers.j2
+        dest: ../scripts/kubernetes_controllers.sh
+
+    - name: Run kubernetes_controllers.sh on each controller node
+      shell: "gcloud compute ssh {{ item }} < ../scripts/kubernetes_controllers.sh"
+      loop: "{{ groups['tag_controller'] }}"
+
+    - name: RBAC for Kubelet Authorization
+      shell: "gcloud compute ssh {{ item }} < ../scripts/rbac.sh"
+      loop: "{{ groups['tag_controller'] }}"
+
+    - name: The Kubernetes Frontend Load Balancer
+      shell: "../scripts/frontend_lb.sh {{ groups['tag_controller']|join(',') }}"
+
+  environment:
+    SERVICE_CLUSTER_IP_RANGE: "{{ service_cluster_ip_range }}"

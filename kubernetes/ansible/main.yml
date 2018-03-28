@@ -1,0 +1,15 @@
+---
+#- import_playbook: playbooks/cfssl.yml
+#- import_playbook: playbooks/kubectl.yml
+#- import_playbook: playbooks/gce_provision.yml
+- import_playbook: playbooks/ca_tls.yml
+- import_playbook: playbooks/kubernetes_auth_conf.yml
+- import_playbook: playbooks/etcd_conf.yml
+- import_playbook: playbooks/kubernetes_controllers.yml
+- import_playbook: playbooks/kubernetes_workers.yml
+- import_playbook: playbooks/kubectl_conf.yml
+- import_playbook: playbooks/pod_routes.yml
+- import_playbook: playbooks/dns_cluster_addon.yml
+
+  environment:
+    INSTALL_DIR: "{{ install_dir }}"

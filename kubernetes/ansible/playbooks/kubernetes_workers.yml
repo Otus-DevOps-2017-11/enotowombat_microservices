@@ -1,0 +1,11 @@
+---
+- name: Bootstrapping the Kubernetes Worker Nodes
+  hosts: localhost
+
+  tasks:
+
+    - name: Run kubernetes_workers.sh on each worker node
+      shell: "gcloud compute ssh {{ item }} < ../scripts/kubernetes_workers.sh"
+      loop: "{{ groups['tag_worker'] }}"
+      environment:
+        SERVICE_CLUSTER_IP_RANGE: "{{ service_cluster_ip_range }}"

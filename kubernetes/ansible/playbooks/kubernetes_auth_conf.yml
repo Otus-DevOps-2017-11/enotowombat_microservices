@@ -1,0 +1,26 @@
+---
+- name: Generating Kubernetes Configuration Files for Authentication
+  hosts: localhost
+
+  tasks:
+    - name: 
+      shell: "../scripts/kubelet_conf.sh {{ item }}"
+      loop: "{{ groups['tag_worker'] }}"
+
+    - name: Generate a kubeconfig file for the kube-proxy service
+      shell: ../scripts/kubeproxy_conf.sh
+
+    - name: Copy the appropriate kubelet and kube-proxy kubeconfig files to each worker instance
+      shell: "cd $INSTALL_DIR && gcloud compute scp {{ item }}.kubeconfig kube-proxy.kubeconfig {{ item }}:~/"
+      loop: "{{ groups['tag_worker'] }}"
+
+    - name: Generating the Data Encryption Config and Key
+      shell: ../scripts/encrypt_conf_key.sh
+
+    - name: Copy the encryption-config.yaml encryption config file to each controller instance
+      shell: "cd $INSTALL_DIR && gcloud compute scp encryption-config.yaml {{ item }}:~/"
+      loop: "{{ groups['tag_controller'] }}"
+
+  environment:
+    INSTALL_DIR: "{{ install_dir }}"
+

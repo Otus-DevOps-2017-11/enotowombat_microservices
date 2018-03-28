@@ -1,0 +1,30 @@
+---
+- name: Install CFSSL
+  hosts: localhost
+
+  tasks:
+    - name: Download cfssl
+      get_url:
+        url: https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
+        dest: "{{ install_dir }}"
+
+    - name: Download cfssljson
+      get_url:
+        url: https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+        dest: "{{ install_dir }}"
+
+    - file:
+        path: "{{ install_dir }}/cfssl_linux-amd64"
+        mode: "u+x"
+
+    - file:
+        path: "{{ install_dir }}/cfssljson_linux-amd64"
+        mode: "u+x"
+
+    - name: Move cfssl
+      become: yes
+      command: mv "{{ install_dir }}/cfssl_linux-amd64" /usr/local/bin/cfssl
+
+    - name: Move cfssljson
+      become: yes
+      command: mv "{{ install_dir }}/cfssljson_linux-amd64" /usr/local/bin/cfssljson

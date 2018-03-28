@@ -1,0 +1,33 @@
+---
+- name: Cleaning Up
+  hosts: localhost
+
+  tasks:
+
+    - name: Delete compute instances
+      shell: gcloud -q compute instances delete {{ item }}
+      loop: "{{ groups['tag_controller']| union(groups['tag_worker']) }}"
+
+    - name: Delete forwarding rule
+      shell: gcloud -q compute forwarding-rules delete kubernetes-forwarding-rule --region $(gcloud config get-value compute/region)
+
+    - name: Delete target pool
+      shell: gcloud -q compute target-pools delete kubernetes-target-pool
+
+    - name: Delete static IP
+      shell: gcloud -q compute addresses delete kubernetes-the-hard-way
+
+    - name: Delete firewall rules
+      shell: gcloud -q compute firewall-rules delete \
+             kubernetes-the-hard-way-allow-nginx-service \
+             kubernetes-the-hard-way-allow-internal \
+             kubernetes-the-hard-way-allow-external
+
+    - name: Delete the Pod network routes
+      shell: gcloud -q compute routes delete $(gcloud compute routes list --format 'value(name)' | grep kubernetes-route)
+
+    - name: Delete the kubernetes subnet
+      shell: gcloud -q compute networks subnets delete kubernetes
+
+    - name: Delete the kubernetes-the-hard-way network VPC
+      shell: gcloud -q compute networks delete kubernetes-the-hard-way

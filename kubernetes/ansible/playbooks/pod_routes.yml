@@ -1,0 +1,10 @@
+---
+- name: Provisioning Pod Network Routes
+  hosts: localhost
+
+  tasks:
+
+    - name: Create network routes for each worker instance
+      command: ../scripts/pod_routes.sh
+      environment:
+        WORKERS_COUNT: "{{ workers_count }}"
