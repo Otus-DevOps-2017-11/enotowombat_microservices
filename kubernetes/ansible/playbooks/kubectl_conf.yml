@@ -1,0 +1,9 @@
+---
+- name: Configuring kubectl for Remote Access
+  hosts: localhost
+
+  tasks:
+    - name: The Admin Kubernetes Configuration File
+      shell: ../scripts/kubectl_conf.sh
+  environment:
+    INSTALL_DIR: "{{ install_dir }}"

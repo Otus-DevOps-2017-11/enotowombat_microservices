@@ -1,0 +1,6 @@
+ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+install_dir: /home/ubuntu/kubernetes
+controllers_count: 2
+workers_count: 2
+service_cluster_ip_range: 10.32.0
+kubernetes_subnet: 10.240.0

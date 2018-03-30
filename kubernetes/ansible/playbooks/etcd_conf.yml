@@ -1,0 +1,18 @@
+---
+- name: Bootstrapping the etcd Cluster
+  hosts: localhost
+
+  tasks:
+    - name: Bootstrapping an etcd Cluster Member
+      template: 
+        src: ../templates/etcd_conf.j2
+        dest: ../scripts/etcd_conf.sh
+
+    - name: Run etcd_conf.sh on each controller node
+      shell: "gcloud compute ssh {{ item }} < ../scripts/etcd_conf.sh"
+      loop: "{{ groups['tag_controller'] }}"
+
+
+  environment:
+    INSTALL_DIR: "{{ install_dir }}"
+    KUBERNETES_SUBNET: "{{ kubernetes_subnet }}"

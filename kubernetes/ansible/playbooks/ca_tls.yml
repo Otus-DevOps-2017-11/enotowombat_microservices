@@ -1,0 +1,32 @@
+---
+- name: Provisioning a CA and Generating TLS Certificates
+  hosts: localhost
+
+  tasks:
+    - name: Certificate Authority
+      shell: ../scripts/create_ca.sh
+
+    - name: Client and Server Certificates
+      shell: ../scripts/client_server_cert.sh
+
+    - name: The Kubelet Client Certificates
+      shell: "../scripts/kubelet_client_cert.sh {{ item }}"
+      loop: "{{ groups['tag_worker'] }}"
+
+    - name: The kube-proxy Client Certificate
+      shell: ../scripts/kubeproxy_cert.sh
+
+    - name: The Kubernetes API Server Certificate
+      shell: "../scripts/apiserver_cert.sh {{ groups['tag_controller']|map('extract', hostvars, 'gce_private_ip')|join(',') }}"
+
+    - name: Copy the appropriate certificates and private keys to each worker instance
+      shell: "cd $INSTALL_DIR && gcloud compute scp ca.pem {{ item }}-key.pem {{ item }}.pem {{ item }}:~/"
+      loop: "{{ groups['tag_worker'] }}"
+
+    - name: Copy the appropriate certificates and private keys to each controller instance
+      shell: "cd $INSTALL_DIR && gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem {{ item }}:~/"
+      loop: "{{ groups['tag_controller'] }}"
+
+  environment:
+    INSTALL_DIR: "{{ install_dir }}"
+    SERVICE_CLUSTER_IP_RANGE: "{{ service_cluster_ip_range }}"

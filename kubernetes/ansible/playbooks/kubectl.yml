@@ -1,0 +1,17 @@
+---
+- name: Install kubectl
+  hosts: localhost
+
+  tasks:
+    - name: Download kubectl
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
+        dest: "{{ install_dir }}"
+
+    - file:
+        path: "{{ install_dir }}/kubectl"
+        mode: "u+x"
+
+    - name: Move kubectl
+      become: yes
+      command: mv "{{ install_dir }}/kubectl" /usr/local/bin/

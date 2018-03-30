@@ -1,0 +1,39 @@
+---
+- name: Provisioning Compute Resources
+  hosts: localhost
+
+  tasks:
+    - name: Create dedicated Virtual Private Cloud
+      command: gcloud compute networks create kubernetes-the-hard-way --subnet-mode custom
+
+    - name: Create the kubernetes subnet in the kubernetes-the-hard-way VPC network
+      command: gcloud compute networks subnets create kubernetes \
+               --network kubernetes-the-hard-way \
+               --range 10.240.0.0/24
+
+    - name: Create a firewall rule that allows internal communication across all protocols
+      command: gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
+               --allow tcp,udp,icmp \
+               --network kubernetes-the-hard-way \
+               --source-ranges 10.240.0.0/24,10.200.0.0/16
+
+    - name: Create a firewall rule that allows external SSH, ICMP, and HTTPS
+      command: gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
+               --allow tcp:22,tcp:6443,icmp \
+               --network kubernetes-the-hard-way \
+               --source-ranges 0.0.0.0/0
+
+    - name: Create public staic IP Address
+      shell: gcloud compute addresses create kubernetes-the-hard-way \
+             --region $(gcloud config get-value compute/region)
+
+    - name: Create Kubernetes Controllers
+      command: ../scripts/create_controllers.sh
+      environment:
+        CONTROLLERS_COUNT: "{{ controllers_count }}"
+
+    - name: Create Kubernetes Workers
+      command: ../scripts/create_workers.sh
+      environment:
+        WORKERS_COUNT: "{{ workers_count }}"
+
