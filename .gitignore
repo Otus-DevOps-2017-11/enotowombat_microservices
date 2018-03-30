@@ -5,3 +5,9 @@ build_info.txt
 
 .env
 *.swp
+
+*.tfstate
+*.tfstate.*.backup
+*.tfstate.backup
+*.tfvars
+.terraform/
