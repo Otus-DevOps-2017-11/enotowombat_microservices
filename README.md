@@ -659,3 +659,24 @@ Cleanup.yml чистит все, включая nginx rule для smoke test.
 
 Второй кластр развернут терраформом, скрипты здсь: kubernetes/terraform
 YAML-манифесты для включения dashboard здесь: kubernetes/dashboard
+
+
+# Homework 30 Kubernetes-3
+
+
+Все пройдено по инструкции
+На применение изменений иногда уходило до 10 минут
+После применения network policy сами пересоздались все поды
+При попытке удаления mongo получил:
+`Error from server (NotFound): error when stopping "mongo-deployment.yml": deployments.extensions "mongo" not found'
+Старый под так и остался висеть в Unknown
+```
+mongo-77dcb74cd5-mskwz     1/1       Running   0          6s
+mongo-77dcb74cd5-tgr9d     1/1       Unknown   0          10m
+```
+73 слайд а gist `storageClassName:slow`, надо fast
+
+### задание *
+`$ kubectl get secret ui-ingress -n dev -o yaml` сохранено в `ui-ingress-secret.yml`
+
+https://35.186.252.21/
