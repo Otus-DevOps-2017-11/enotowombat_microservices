@@ -1,0 +1,13 @@
+---
+service:
+  internalPort: 9292
+  externalPort: 9292
+
+image:
+  repository: enot/ui
+  tag: wo_zipkin
+
+postHost:
+postPort:
+commentHost:
+commentPort:

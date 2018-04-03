@@ -680,3 +680,17 @@ mongo-77dcb74cd5-tgr9d     1/1       Unknown   0          10m
 `$ kubectl get secret ui-ingress -n dev -o yaml` сохранено в `ui-ingress-secret.yml`
 
 https://35.186.252.21/
+
+
+# HW 31 kubernetes-4 
+
+Основное только
+
+Выполнено по инструкции
+Почти как написано, но с шероховатостями:
+`Немного обновим конфиг ингресса для сервиса UI: reddit-deploy/ui/templates/ingress.yml`
+`yAml`
+`Обновим конфиг ингресса для сервиса UI: reddit-deploy/ui/templates/values.yml`
+`reddit-deploy/ui/values.yml`
+`/etc/hosts` пришлось вручную забивать, копирование из HW несет с собой какие-то левые символы. не применяется
+еще что-то было, не записал

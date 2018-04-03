@@ -1,0 +1,6 @@
+dependencies:
+- name: ui
+  repository: file://../ui
+  version: 1.0.0
+digest: sha256:e29c9bef667b1e78be9c517aae5b23bae40dea98882a4e790fabc91c6901b31e
+generated: 2018-04-02T19:52:10.265113819Z
