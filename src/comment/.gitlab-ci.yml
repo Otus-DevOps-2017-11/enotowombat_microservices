@@ -78,6 +78,11 @@ stop_review:
   except:
     - master
 
+trigger_build:
+  stage: release
+  script:
+    - "apk add -U curl && curl -X POST -F token=d218623550064c9e0722f703582529 -F ref=master http://gitlab-gitlab/api/v4/projects/1/trigger/pipeline"
+
 .auto_devops: &auto_devops |
   [[ "$TRACE" ]] && set -x
   export CI_REGISTRY="index.docker.io"
