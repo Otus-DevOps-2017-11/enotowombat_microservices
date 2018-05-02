@@ -11,3 +11,6 @@ build_info.txt
 *.tfstate.backup
 *.tfvars
 .terraform/
+
+tls.crt
+tls.key
