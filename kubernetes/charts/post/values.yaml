@@ -1,0 +1,10 @@
+---
+service:
+  internalPort: 5000
+  externalPort: 5000
+
+image:
+  repository: enot/post
+  tag: wo_zipkin
+
+databaseHost:
