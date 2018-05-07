@@ -1,0 +1,8 @@
+---
+name: efk
+version: 1.0.0
+description: EFK
+maintainers:
+  - name: Vadim Myagkov
+    email: g0nz0@mail.ru
+appVersion: 1.0
